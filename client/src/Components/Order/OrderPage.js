@@ -1,104 +1,96 @@
-import React from "react";
-import { Button } from "mdbreact";
-import { Component } from "react";
-import { addOrder } from "../../Actions/OrderAction";
-import { connect } from 'react-redux';
-import { withRouter } from "react-router-dom";
-import { fetchProfileByUserId } from "../../Actions/AuthActions";
+// @import NPM Modules
+import React, { Component } from "react";
+import PropTypes from "prop-types";
+import { connect } from "react-redux";
+import { Container, Col, Row } from "mdbreact";
 
-class OrderPage extends Component {
-	constructor(props) {
-		super(props);
-		this.state = {
-			buyItem: {},
-			qty: 1
-		};
-		this.updateDetails = this.updateDetails.bind(this);
-		this.handleSubmit = this.handleSubmit.bind(this);
-	}
-	updateDetails(event) {
-		this.setState({
-			[event.target.name]: event.target.value
-		});
-	}
+// @import Project Components
+import { fetchOrdersById } from "../../Actions/OrderActions";
+import isEmpty from "../../Utils/isEmpty";
+import OrderList from "./OrderList";
 
-	handleSubmit(event) {
-		event.preventDefault();
+// @Name OrderPage
+// @Description Provides a little display page to show information for order
+export class OrderPage extends Component {
+  static propTypes = {
+    auth: PropTypes.object.isRequired,
+    errors: PropTypes.object.isRequired,
+    orders: PropTypes.array.isRequired
+  };
 
-		let submitOrder = {
-			qty: this.state.qty,
-			isCompleted: false,
-			time: "2018-10-04T08:18:09.171Z",
-			userId: this.props.userID,
-			productId: this.state.buyItem.id,
-			product: {
-				name: this.state.buyItem.name,
-				price: this.state.buyItem.price,
-				img: this.state.buyItem.img,
-				description: this.state.buyItem.description,
-				userId: this.state.buyItem.userId
-			}
-		};
-		this.props.addOrder(submitOrder);
-		this.props.history.push("/dashboard");
-	}
-	componentDidMount() {
-		this.setState({ buyItem: this.props.item });
-	}
+  constructor(props) {
+    super(props);
 
-	render() {
-		const { qty } = this.state;
-		return (
-			<div className="container mt-4">
-				<h1>
-					Comfirm Order <small className="text-info">{this.state.buyItem.name}</small>
-				</h1>
-				<div className="card">
-					<h4 className="card-header primary-color white-text">
-						<a>Item details</a>
+    this.state = {
+      currentOrders: [],
+      previousOrders: []
+    };
+  }
 
-					</h4>
-					<div class="card-body">
+  async componentDidMount() {
+    await this.props.fetchOrdersById(this.props.auth.user._id);
+    this.populateOrders(this.props.orders);
+  }
 
-						<div className="card-text">
-							<p>
-								Name: <strong>{this.state.buyItem.name}</strong>
-							</p>
+  componentWillReceiveProps(nextProps) {
+    this.populateOrders(nextProps.orders);
+  }
 
-							<p>Price: ${this.state.buyItem.price}</p>
+  // @Name populateOrders
+  // @Description generate display for orders
+  populateOrders(orders) {
+    let currentOrdersBuffer = [];
+    let previousOrdersBuffer = [];
 
-							<p>Description: {this.state.buyItem.description}</p>
-						</div>
-					</div>
-				</div>
-				<div class="card">
-					<h4 class="card-header primary-color white-text">Order Amount</h4>
-					<div class="card-body">
-						<form onSubmit={this.handleSubmit} className="md-form">
-							<input
-								className="form-control"
-								type="number"
-								name="qty"
-								value={qty}
-								onChange={this.updateDetails}
-							/>
-							<Button className="btn btn-primary float-right" type="submit">comfirm order</Button>
-						</form>
-					</div>
-				</div>
-			</div>
-		);
-	}
+    if (!isEmpty(orders)) {
+      orders.map(order => {
+        return order.isCompleted
+          ? previousOrdersBuffer.push(order)
+          : currentOrdersBuffer.push(order);
+      });
+    }
+
+    this.setState({
+      currentOrders: currentOrdersBuffer,
+      previousOrders: previousOrdersBuffer
+    });
+  }
+  
+  // @Name render
+  // @Description renders the product component
+  render() {
+    let { currentOrders, previousOrders } = this.state;
+    return (
+      <Container className="mt-custom">
+        <Row>
+          <Col md="12">
+            <h2 className="text-center">Current Orders</h2>
+            <OrderList orders={currentOrders} />
+          </Col>
+        </Row>
+
+        <Row className="mt-5">
+          <Col md="12">
+            <h2 className="text-center">Previous Orders</h2>
+            <OrderList orders={previousOrders} />
+          </Col>
+        </Row>
+      </Container>
+    );
+  }
 }
+
 const mapStateToProps = state => ({
-	userInfo: state.auth.user,
-	userID: state.auth.user.id,
-	addResponse: state.products.addResponse,
-	sellerInfo: state.auth.requesedUserInfo
+  auth: state.auth,
+  errors: state.errors,
+  orders: state.orders.orders
 });
-export default withRouter(
-	connect(
-		mapStateToProps,
-		{ addOrder, fetchProfileByUserId }
-	)(OrderPage)
-);
+
+const mapDispatchToProps = {
+  fetchOrdersById
+};
+
+export default connect(
+  mapStateToProps,
+  mapDispatchToProps
+)(OrderPage);

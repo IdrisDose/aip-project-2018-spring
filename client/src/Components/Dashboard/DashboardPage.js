@@ -1,63 +1,99 @@
-import React, { Component } from 'react'
-import { ListGroup, ListGroupItem } from 'mdbreact'
-/* compoments */
-import UserProfile from './UserProfile';
-import UserProducts from './Products/UserProducts';
-import UserOrder from './Orders/UserOrders';
-import UserSell from './Sells/UserSells'
-export class DashboardPage extends Component {
+// @import NPM Modules
+import React, { Component } from "react";
+import PropTypes from "prop-types";
+import { connect } from "react-redux";
+import { BrowserRouter as Router, withRouter, Route } from "react-router-dom";
+import { Container, Row, Col, Nav, NavItem, NavLink, Fa } from "mdbreact";
 
-    constructor(props) {
-        super(props);
-        this.state = {
-            renderCompoment: "",
-            selectedIndex: 0,
-        }
-    }
-    componentWillMount() {
-        this.onNavClick(0);
-    }
-    onNavClick(id) {
-        console.log("clicked ",id);
-        switch (id) {
-            case 0:
-                this.setState({renderCompoment:<UserProfile/>});
-                break;
-            case 1:
-                this.setState({renderCompoment:<UserProducts/>});
-                break;
-            case 2:
-                this.setState({renderCompoment:<UserOrder/>});
-                break;
-            case 3:
-                this.setState({renderCompoment:<UserSell/>});
-                break;
-            default:
-                this.setState({renderCompoment:<UserProfile/>});
-                break;
+// @import Project Components
+import DashboardHomePage from "./DashboardHomePage";
+import BuyingList from "./Buying/BuyingList";
+import NewProductForm from "./Selling/NewProductForm";
+import ProfileForm from "../Auth/Profile/ProfileForm";
+import SellingList from "./Selling/SellingList";
 
-        }
-    }
-    render() {
-        return (
-            <div className="container">
-                <div className="row mt-5">
-                    <div className="col-md-3">
-                        <ListGroup>
-                            <ListGroupItem hover onClick={() => {this.onNavClick(0)}}>Profile</ListGroupItem>
-                            <ListGroupItem hover onClick={() => {this.onNavClick(1)}}>My Sell items</ListGroupItem>
-                            <ListGroupItem hover onClick={() => {this.onNavClick(2)}}>My Orders</ListGroupItem>
-                            <ListGroupItem hover onClick={() => {this.onNavClick(3)}}>My Sells</ListGroupItem>
-                        </ListGroup>
-                    </div>
-                    <div className="col-md-9">
-                        {this.state.renderCompoment}
-                    </div>
-                </div>
-            </div>
-        )
+export class DashboardMainPage extends Component {
+  static propTypes = {
+    auth: PropTypes.object.isRequired
+  };
 
-    }
+  render() {
+    return (
+      <Router>
+        <Container className="mt-5" fluid>
+          <Row className="pt-5">
+            <Col md="2">
+              <h3 className="text-center">Dashboard Navigation</h3>
+              <hr />
+              <Nav pills color="blue" className="flex-column">
+                <NavItem>
+                  <NavLink to="/dashboard/home">
+                    Dashboard Home
+                    <Fa icon="dashboard" className="ml-2" />
+                  </NavLink>
+                </NavItem>
+
+                <NavItem>
+                  <NavLink to="/dashboard/newproduct">
+                    Post new product
+                    <Fa icon="pencil-square-o" className="ml-2" />
+                  </NavLink>
+                </NavItem>
+
+                <NavItem>
+                  <NavLink to="/dashboard/buying">
+                    Bought Items
+                    <Fa icon="cart-arrow-down" className="ml-2" />
+                  </NavLink>
+                </NavItem>
+
+                <NavItem>
+                  <NavLink to="/dashboard/selling">
+                    Your Products
+                    <Fa icon="dollar" className="ml-2" />
+                  </NavLink>
+                </NavItem>
+
+                <NavItem>
+                  <NavLink to="/dashboard/settings">
+                    Settings
+                    <Fa icon="gear" className="ml-2" />
+                  </NavLink>
+                </NavItem>
+              </Nav>
+              <hr />
+            </Col>
+            <Col md="9">
+              <Route
+                exact
+                path="/dashboard/home"
+                component={DashboardHomePage}
+              />
+              <Route
+                exact
+                path="/dashboard/newproduct"
+                component={NewProductForm}
+              />
+              <Route exact path="/dashboard/buying" component={BuyingList} />
+              <Route exact path="/dashboard/selling" component={SellingList} />
+              <Route exact path="/dashboard/settings" component={ProfileForm} />
+            </Col>
+          </Row>
+        </Container>
+      </Router>
+    );
+  }
 }
 
-export default DashboardPage
+const mapStateToProps = state => ({
+  auth: state.auth
+});
+
+const mapDispatchToProps = {};
+
+export default withRouter(
+  connect(
+    mapStateToProps,
+    mapDispatchToProps
+  )(DashboardMainPage)
+);

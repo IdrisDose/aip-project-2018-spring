@@ -1,54 +1,27 @@
-import * as Type from "../Actions/Types";
+import { NEW_ORDER, FETCH_ORDERS } from "../Actions/Types";
+import isEmpty from "../Utils/isEmpty";
 
 const initialState = {
-	items: [],
-	item: {},
-	error: false,
-	errorMsg: '',
+  orders: [],
+  isEmpty: true
 };
-export default function (state = initialState, action) {
-	switch (action.type) {
-		case Type.FETCH_ORDERS:
-			return {
-				...state,
-				orders: action.payload
-			};
-		case Type.FETCH_ORDER_ID:
-			return {
-				...state,
-				orderItem: action.payload
-			};
-		case Type.SEARCH_ORDERS:
-			return {
-				...state,
-				orders: action.payload
-			};
-		case Type.FETCH_ORDER_USER_ID:
-			return {
-				...state,
-				userOrders: action.payload
-			};
-		case Type.FETCH_ORDER_SELLER_ID:
-			return {
-				...state,
-				sellerOrders: action.payload
-			};
-		case Type.ADD_ORDER:
-			return {
-				...state,
-				addResponse: action.payload
-			};
-		case Type.UPDATE_ORDER:
-			return {
-				...state,
-				updateResponse: action.payload
-			};
-		case Type.FETCH_ORDERS_ERROR:
-			return {
-				...state,
-				error:true,
-				errorMsg: action.payload
-			};
-		default: return state;
-	}
+export default function(state = initialState, action) {
+  switch (action.type) {
+    case NEW_ORDER:
+      let order = action.payload;
+
+      state.orders.push(order);
+      return {
+        ...state,
+        isEmpty: isEmpty(state.orders)
+      };
+    case FETCH_ORDERS:
+      return {
+        ...state,
+        orders: action.payload,
+        isEmpty: isEmpty(action.payload)
+      };
+    default:
+      return state;
+  }
 }

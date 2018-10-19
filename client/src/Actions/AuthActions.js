@@ -1,136 +1,141 @@
-import {FETCH_USER, USER_SET, USER_ERROR, USER_LOGOUT, FETCH_USER_ID, FETCH_USERS_ERROR} from "./Types";
+import { toast } from "mdbreact";
 import Axios from "axios";
-import setAuthorizationToken from "../Utils/AuthorizationToken";
 import jwt from "jsonwebtoken";
 
-const API_URL = "http://127.0.0.1:3000/api";
-const userRestURI = "http://localhost:3000/api/CustomUsers";
+import { USER_SET, FETCH_USER_ID, FETCH_USER_STATS } from "./Types";
+import setAuthorizationToken from "../Utils/AuthorizationToken";
+import isEmpty from "../Utils/isEmpty";
+import slugify from "../Utils/slugify";
 
-export const fetchUser = () => dispatch => {
-  Axios.get(API_URL + "/CustomUsers").then(response => {
-    dispatch({
-      type: FETCH_USER,
-      payload: response.data
-    });
-  });
-};
+import { handleError } from "./ErrorActions";
+import * as Msg from "../Utils/Constants";
 
-export const userLogin = auth => dispatch => {
+const API_URL = process.env.REACT_APP_API_URL || "http://localhost:3000/api";
+
+const authUrl = API_URL + "/auth";
+const profileURL = API_URL + "/profiles";
+
+//TODO: Need to update for login.
+export const userLogin = (auth, history) => dispatch => {
   //doLogin
   let email = auth.email;
   let password = auth.password;
 
-  return Axios.post(API_URL + "/CustomUsers/login", {
+  return Axios.post(authUrl + "/login", {
     email,
     password
   })
     .then(res => {
-      let jwtToken = "";
-      let ttl = res.data.ttl;
-      let accessToken = res.data.id;
+      let token = res.data.token;
 
       //Set User Token For Axios
-      const token = accessToken;
       localStorage.setItem("token", token);
       setAuthorizationToken(token);
-
-      //Create JWT for later :)
-      Axios.get(API_URL + "/CustomUsers/" + res.data.userId).then(res => {
-        jwtToken = jwt.sign(
-          {
-            exp: ttl,
-            data: res.data
-          },
-          "storeappsecur3"
-        );
-        localStorage.setItem("session", jwtToken);
-        dispatch({
-          type: USER_SET,
-          user: res.data
-        });
-      });
+      dispatch(userSet(token));
+      toast.success("Logged in!");
+      history.push("/");
     })
-    .catch(err => {
-      dispatch({
-        type: USER_ERROR,
-        errors: err.response.data
-      });
-    });
+    .catch(axiosError => handleError(axiosError, dispatch));
 };
 
-export const userRegister = auth => {
+// TODO: Need to update for later
+export const userRegister = (user, history) => {
   //doRegister
-  let userName = auth.name; //For the backend it's nammed username
-  let email = auth.email; // For the backend it's named email.
-  let password = auth.password;
+  let handle = slugify(user.username);
+  let fname = user.fname; //Name for user
+  let lname = user.lname; //Name for user
+  let email = user.email; // Email for storage in backend
+  let confirm = user.confirm; // This is the secondary email to double check that they are the same on the back end
+  let password = user.password;
+  let passwordConfirm = user.passwordConfirm;
 
   return dispatch => {
-    return Axios.post(API_URL + "/CustomUsers", {
-      userName,
+    return Axios.post(authUrl + "/register", {
+      handle,
+      fname,
+      lname,
       email,
+      confirm,
       password,
-      emailVerified: true,
-      verificationToken: "testtoken"
-    });
+      passwordConfirm
+    })
+      .then(res => {
+        if (res.data.success) {
+          toast.success(Msg.REGISTER_SECCUESS);
+          history.push("/login");
+        }
+      })
+      .catch(axiosError => handleError(axiosError, dispatch));
   };
 };
 
-export const userExists = user => {};
-
-export const userSet = user => dispatch => {
-  dispatch({
-    type: FETCH_USER,
-    payload: user
+export const userSet = token => dispatch => {
+  //If token is not empty decode token else empty string :)
+  let decoded = !isEmpty(token) ? jwt.decode(token) : "";
+  return dispatch({
+    type: USER_SET,
+    payload: decoded
   });
 };
 
-export const fetchProfileByUserId = (id) => dispatch => {
-  console.log("fetchProfileByUserId: ",id);
-  Axios.get(userRestURI +"/" +id)
-    .then(
-      response => {
-        dispatch({
-          type: FETCH_USER_ID,
-          payload: response.data
-        })
-      },
-    )
-    .catch(error => {
+export const fetchProfileByUserId = id => dispatch => {
+  console.log("fetchProfileByUserId: ", id);
+  Axios.get(profileURL + "/" + id)
+    .then(response => {
       dispatch({
-        type: FETCH_USERS_ERROR,
-        payload: error.message
-      })
+        type: FETCH_USER_ID,
+        payload: response.data
+      });
     })
+    .catch(axiosError => handleError(axiosError, dispatch));
 };
 
-export const userVerify = auth => {
-  let id = auth.id;
-  let token = "testtoken";
+export const userLogout = (user, history) => dispatch => {
+  //Remove token for logout
+  localStorage.removeItem("token");
+  // set blank token to auth
+  setAuthorizationToken();
+
+  dispatch({
+    type: USER_SET,
+    payload: {}
+  });
+
+  toast.info(Msg.LOGOUT_SUCCESS);
+  history.push("/login");
+};
+
+export const profileGet = handle => {
   return dispatch => {
-    return Axios.get(API_URL + "/CustomUsers/confirm", {
-      params: {
-        uid: id,
-        token: token
-      }
-    });
+    return Axios.get(profileURL + "/" + handle);
   };
 };
 
-export const userLogout = user => dispatch => {
-  Axios.post(API_URL + '/CustomUsers/logout').then(
-    res=>{
-      localStorage.removeItem("token");
-      localStorage.removeItem("session");
-      setAuthorizationToken();
+export const profileUpdate = formData => {
+  let _id = formData._id;
+  let website = formData.website;
+  let location = formData.location;
+  let description = formData.description;
 
-      return dispatch({
-        type: USER_LOGOUT,
-        payload: {}
-      });
-    },
-    err=>{
-      console.log("ERROR Contact admin!");
-    }
-  );
+  return dispatch => {
+    return Axios.put(profileURL, {
+      _id,
+      website,
+      location,
+      description
+    }).catch(axiosError => handleError(axiosError, dispatch));
+  };
+};
+
+export const fetchUserStats = () => dispatch => {
+  toast.info('Fetching User Stats');
   
+  return Axios.get(authUrl + "/userstats")
+    .then(response => {
+      return dispatch({
+        type: FETCH_USER_STATS,
+        payload: response.data
+      });
+    })
+    .catch(axiosError => handleError(axiosError, dispatch));
 };

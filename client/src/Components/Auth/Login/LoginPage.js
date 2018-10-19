@@ -1,23 +1,123 @@
 import React, { Component } from "react";
-import { Container, Row, Col } from "mdbreact";
-import LoginForm from "./LoginForm";
-import { userLogin } from "../../../Actions/AuthActions";
-import { addFlashMessage } from "../../../Actions/FlashActions";
+import { Container, Row, Col, Input, Button } from "mdbreact";
+import validator from "validator";
 import { connect } from "react-redux";
 import PropTypes from "prop-types";
+import { withRouter, Link } from "react-router-dom";
+
+import { userLogin } from "../../../Actions/AuthActions";
+import isEmpty from "../../../Utils/isEmpty";
 
 export class LoginPage extends Component {
+  constructor(props) {
+    super(props);
+    this.state = {
+      errors: {},
+      email: "",
+      password: "",
+      isLoading: true
+    };
+
+    this.updateDetails = this.updateDetails.bind(this);
+    this.submitHandler = this.submitHandler.bind(this);
+  }
+
+  componentWillReceiveProps(nextProps) {
+    if (nextProps.errors) {
+      this.setState({ errors: nextProps.errors });
+    }
+  }
+
+  submitHandler(event) {
+    event.preventDefault();
+
+    this.setState({ errors: {}, isLoading: true });
+    this.props.userLogin(this.state, this.props.history);
+    this.setState({ isLoading: false });
+  }
+
+  updateDetails(event) {
+    this.setState({
+      [event.target.name]: validator.escape(event.target.value)
+    });
+  }
+  componentDidMount() {
+    if (this.props.auth.isLoggedIn) {
+      this.props.history.push("/dashboard");
+    }
+  }
+
+  writeConsole(test) {
+    console.log(...test);
+  }
   render() {
-    const { userLogin, addFlashMessage, auth } = this.props;
+    //Deconstruct the state
+    const { errors, email, password } = this.state;
+
+    //Check to see if there are any input errors
+    const emailErrorClass = errors.email ? "invalid" : "";
+    const passErrorClass = errors.password ? "invalid" : "";
+
+    ///Check to see if there is any errors
+    const alertError = !isEmpty(errors) ? "alert alert-danger" : "hidden";
+
+    //Error Displays
+    let printErrors = !isEmpty(errors)
+      ? Object.values(errors).map((error, index) => (
+          <>
+            <span key={index}>{error}</span>
+            <br />
+          </>
+        ))
+      : "";
+
     return (
-      <Container>
-        <Row>
+      <Container className="mt-5">
+        <Row className="pt-5">
           <Col md="6" className="mx-auto">
-            <LoginForm
-              userLogin={userLogin}
-              addFlashMessage={addFlashMessage}
-              auth={auth}
-            />
+            <form className="needs-validation" onSubmit={this.submitHandler}>
+              <p className="display-4 h5 text-center mb-4">Sign in</p>
+              <div className={alertError} role="alert">
+                {printErrors}
+              </div>
+              <div className="grey-text">
+                <Input
+                  label="Type your email"
+                  icon="envelope"
+                  name="email"
+                  group
+                  type="email"
+                  validate
+                  value={email}
+                  success="right"
+                  onChange={this.updateDetails}
+                  required
+                  className={emailErrorClass}
+                />
+                <Input
+                  label="Type your password"
+                  icon="lock"
+                  name="password"
+                  group
+                  type="password"
+                  value={password}
+                  validate
+                  onChange={this.updateDetails}
+                  required
+                  className={passErrorClass}
+                />
+              </div>
+              <div className="text-center">
+                <Button color="primary" type="submit">
+                  Login
+                </Button>
+              </div>
+              <br />
+              <hr />
+              <div className="text-center">
+                <Link to="/register">Click here to register</Link>
+              </div>
+            </form>
           </Col>
         </Row>
       </Container>
@@ -27,19 +127,21 @@ export class LoginPage extends Component {
 
 LoginPage.propTypes = {
   userLogin: PropTypes.func.isRequired,
-  addFlashMessage: PropTypes.func.isRequired,
-  auth: PropTypes.object.isRequired
+  auth: PropTypes.object.isRequired,
+  errors: PropTypes.object.isRequired
 };
 
 const mapStateToProps = state => ({
-  auth:state.auth
+  auth: state.auth,
+  errors: state.errors
 });
 const mapDispatchToProps = {
-  userLogin,
-  addFlashMessage
+  userLogin
 };
 
-export default connect(
-  mapStateToProps,
-  mapDispatchToProps
-)(LoginPage);
+export default withRouter(
+  connect(
+    mapStateToProps,
+    mapDispatchToProps
+  )(LoginPage)
+);

@@ -1,50 +1,43 @@
-import React, { Component } from 'react';
-import { Col, Container, Row } from "mdbreact";
-import { connect } from 'react-redux';
-import { fetchProducts } from "../../Actions/ProductAction";
-import ProductItem from "./ProductItem";
-class Products extends Component {
- 
-    componentWillMount() {
-        this.props.fetchProducts();
-    }
-    render() {
-       
+// @import NPM Modules
+import React, { Component } from "react";
+import PropTypes from "prop-types";
+import { connect } from "react-redux";
+import { Container, Col, Row } from "mdbreact";
+// @import Project Components
+import Product from "./Product";
 
-        const productItems = this.props.products.map(item => (
-            <ProductItem id={item.id} data={item} key={item.id}/>
-        ));
-        /*
-        const error = this.props.error;
-        const errorMsg = this.props.errorMsg;
-        if (error) {
-            return (
-                <Container>
-                    <Row>
-                        <div>
-                            Products fetch faild: {errorMsg}
-                        </div>
-                    </Row>
-                </Container>
-            )
-        }
-        */
-        return (
-            <Container>
-                <Row>
-                    <Col md="12" className="mx-auto">
-                        <h1 className="display-4 text-center">Products</h1>
-                        {productItems}
-                    </Col>
-                </Row>
-            </Container>
-        )
-    }
+// @Name Products
+// @Description Provides display to products
+export class Products extends Component {
+  static propTypes = {
+    products: PropTypes.array.isRequired
+  };
+
+  render() {
+    let products = this.props.products.map((item, i) => (
+      <Product key={i} product={item} />
+    ));
+    return (
+      <Container className="mt-custom" fluid>
+        <Row>
+          <Col>
+            <h1 className="text-center">Available Products</h1>
+            <hr />
+          </Col>
+        </Row>
+        <Row>{products}</Row>
+      </Container>
+    );
+  }
 }
 
 const mapStateToProps = state => ({
-    products: state.products.items,
-    error: state.products.error,
-    errorMsg: state.products.errorMsg
-})
-export default connect(mapStateToProps, { fetchProducts })(Products);
+  products: state.products.products
+});
+
+const mapDispatchToProps = {};
+
+export default connect(
+  mapStateToProps,
+  mapDispatchToProps
+)(Products);
